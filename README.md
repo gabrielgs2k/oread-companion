@@ -199,7 +199,7 @@ Can they be removed? Sure, just like any security feature. But responsible devel
 ### Getting Started
 
 1. **Install** - Follow the [INSTALLATION.md](INSTALLATION.md) guide
-2. **Download a model** - We recommend MN-Violet-Lotus-12B (see installation guide)
+2. **Download a model** - See [Installation](INSTALLATION.md) for an overview of model options
 3. **Start Oread** - Run `./start-oread.sh`
 4. **Open browser** - Go to `https://localhost:9000`
 5. **Login** - Default password is `oread` (change it immediately!)
