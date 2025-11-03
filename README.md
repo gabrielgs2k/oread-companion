@@ -272,6 +272,8 @@ Want to help? Awesome!
 ## What's Coming and Experiement Features
 
 ### Planned Features
+- A way to understand, but not store user images
+- A way to understand user shared links
 - Optional audio
 - Multi-language Support - It is just English right now
 - Mobile app options
