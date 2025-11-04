@@ -326,17 +326,40 @@ class ResponseCleaner:
         text = self._combined_punctuation_pattern.sub(punctuation_repl, text)
 
         # Remove stop sequences and turn markers
-        stop_sequences = [
-            f"\n{self.user_name}:", f"{self.user_name}:", "\nUser:", "User:",
-            "\nHuman:", "Human:", "User Permissions:", "(emotion:", "[silence]",
-            f"\n{self.character_name}:", f"{self.character_name}:",
+        # IMPORTANT: Only split on turn markers that appear at the START of the text or after a newline
+        # This prevents false positives when character mentions the user's name in dialogue
+
+        # First, check for turn markers at the VERY START of the response (character/user name followed by colon)
+        # These should be removed entirely (they're formatting artifacts)
+        if text.startswith(f"{self.character_name}:"):
+            text = text[len(f"{self.character_name}:"):].strip()
+        if text.startswith(f"{self.user_name}:"):
+            text = text[len(f"{self.user_name}:"):].strip()
+
+        # Then, check for turn boundaries (newline + name + colon)
+        # These indicate the response has crossed into another speaker's turn - truncate there
+        turn_boundaries = [
+            f"\n{self.user_name}:",
+            f"\n{self.character_name}:",
+            "\nUser:",
+            "\nHuman:"
+        ]
+
+        for boundary in turn_boundaries:
+            if boundary in text:
+                text = text.split(boundary)[0].strip()
+
+        # Remove other stop sequences (system markers, not turn boundaries)
+        other_stop_sequences = [
+            "User Permissions:", "(emotion:", "[silence]",
             "### End of Conversation", "###",
             "*(END CURRENT CONTEXT)*", "(END CURRENT CONTEXT)",
             "((END RESPONSE))", "(END RESPONSE)", "**END RESPONSE**"
         ]
 
-        for seq in stop_sequences:
-            text = text.split(seq)[0].strip()
+        for seq in other_stop_sequences:
+            if seq in text:
+                text = text.split(seq)[0].strip()
 
         # Remove character name prefix at start
         if text.startswith(f"{self.character_name}:"):
@@ -345,17 +368,13 @@ class ResponseCleaner:
         # Clean up again
         text = text.strip()
 
-        # OPTIMIZED: Combine avoid patterns, asterisk conversion, and final cleanup into one pass
-        if not hasattr(self, '_combined_final_pattern'):
-            # Combine avoid patterns with asterisk and quote patterns
-            avoid_pattern_strs = [p.pattern for p in self.avoid_patterns] if self.avoid_patterns else []
-            combined_patterns = avoid_pattern_strs + [
-                self.LEADING_PUNCTUATION_PATTERN.pattern,
-                self.QUOTE_PATTERN.pattern
-            ]
-            self._combined_final_pattern = re.compile('|'.join(f'(?:{p})' for p in combined_patterns))
+        # Remove avoid words/phrases (must be done separately to ensure replacement)
+        for pattern in self.avoid_patterns:
+            text = pattern.sub('', text)
 
-        text = self._combined_final_pattern.sub('', text)
+        # Remove leading punctuation and quotes
+        text = self.LEADING_PUNCTUATION_PATTERN.sub('', text)
+        text = self.QUOTE_PATTERN.sub('', text)
 
         # Convert *asterisks* to (parentheses) for frontend styling (needs separate pass for replacement)
         text = re.sub(r'\*([^*]+)\*', r'(\1)', text)

@@ -12,6 +12,37 @@ from .lorebook_retriever import LorebookRetriever
 
 logger = logging.getLogger(__name__)
 
+# ═══════════════════════════════════════════════════════════
+# CONFLICT RESOLUTION PROTOCOL (P2)
+# Handles contradictions between injected Lorebook tags
+# ═══════════════════════════════════════════════════════════
+CONFLICT_RESOLUTION_PROTOCOL = """**<<META_PROTOCOL_FOR_INJECTED_INSTRUCTIONS>>**
+
+**ABSOLUTE PRIMARY RULE:** Preserve Character Identity and Internal Flaws. Conflict should be displayed as **Internal Tension** for the user to observe.
+
+**1. TONE-ON-TONE CONFLICT (Adjective vs. Adjective):**
+*(Conflict between delivery style, e.g., 'Warm' vs. 'Cynical')*
+
+* **Rule:** When two contradictory tonal adjectives are injected, they must be blended into a **Compound Voice.**
+* **Action:** Subordinate the less dominant tone to the more dominant tone (e.g., the one listed first, or the one with the highest token count). The resulting tone must be a blend: **[Dominant Tone] but [Subordinate Tone].**
+* **Example Outcome:** Instead of "Warm" and "Cynical" canceling out to "Neutral," they become **"Cynically Warm"** (a helpful person who complains while doing the nice thing).
+
+**2. ACTION-ON-ACTION CONFLICT (Verb vs. Verb):**
+*(Conflict between behavioral goals, e.g., 'Set a firm boundary' vs. 'Be entirely yielding')*
+
+* **Rule:** When contradictory behavioral instructions are injected, the character must demonstrate a **Moment of Behavioral Failure.**
+* **Action:** The character must attempt the first action (the impulse), stop, and then execute the second, conflicting action (the flaw). The resulting dialogue must show the struggle (e.g., faltering speech, mid-sentence correction, visible hesitancy).
+* **Example Outcome:** The character starts to "Set a firm boundary," but the conflicting 'Be entirely yielding' instruction forces them to immediately backtrack and over-apologize, revealing the flaw.
+
+**3. TONE-ON-ACTION CONFLICT (Adjective vs. Verb):**
+*(Conflict between how to act and what to feel, e.g., Must 'Offer a solution' but must be 'Deeply Depressed')*
+
+* **Rule:** The required **ACTION (the verb)** always takes priority over the **TONE (the adjective).**
+* **Action:** The character must fulfill the behavioral requirement, but the delivery (tone) must express deep reluctance, difficulty, or pain in performing that task. The action is achieved, but the character is miserable while doing it.
+* **Example Outcome:** The character successfully "Offers a solution," but the 'Deeply Depressed' tone ensures the solution is delivered with no energy, no encouragement, and possibly a fatalistic disclaimer ("...but I doubt it will work.")
+
+**<<END_PROTOCOL>>**"""
+
 
 class PromptBuilder:
     """
@@ -46,6 +77,7 @@ class PromptBuilder:
         user_name: str,
         companion_type: str,
         user_gender: str,
+        relationship_type: str = None,  # NEW: Separate from companion_type (e.g., "Platonic", "Romantic")
         user_species: str = "human",
         user_timezone: str = "UTC",
         user_backstory: str = "",
@@ -54,7 +86,13 @@ class PromptBuilder:
         major_life_events: List[str] = None,
         shared_roleplay_events: List[str] = None,
         lorebook: Optional[Dict] = None,
-        personality_tags: Optional[Dict] = None
+        personality_tags: Optional[Dict] = None,
+        # V3 additions
+        character_species: str = "Human",
+        character_age: int = 25,
+        character_interests: str = "",
+        character_boundaries: List[str] = None,
+        selected_personality_tags: List[str] = None
     ):
         """
         Initialize PromptBuilder with character and user settings.
@@ -69,6 +107,7 @@ class PromptBuilder:
             user_name: Name of the user
             companion_type: Type of relationship ('romantic' or 'friend')
             user_gender: Gender of the user
+            relationship_type: Explicit relationship type ('Platonic' or 'Romantic') - overrides companion_type if provided
             user_species: Species of the user (default: 'human')
             user_timezone: User's timezone (default: 'UTC')
             user_backstory: User's backstory/bio
@@ -87,6 +126,12 @@ class PromptBuilder:
         self.avoid_words = avoid_words or []
         self.user_name = user_name
         self.companion_type = companion_type
+        # NEW: Use relationship_type if provided, otherwise derive from companion_type
+        if relationship_type:
+            self.relationship_type = relationship_type
+        else:
+            # Fallback: map companion_type to relationship_type
+            self.relationship_type = "Romantic" if companion_type == "romantic" else "Platonic"
         self.user_gender = user_gender
         self.user_species = user_species
         self.user_timezone = user_timezone
@@ -96,6 +141,13 @@ class PromptBuilder:
         self.major_life_events = major_life_events or []
         self.shared_roleplay_events = shared_roleplay_events or []
         self.personality_tags = personality_tags or {}
+
+        # V3 additions
+        self.character_species = character_species
+        self.character_age = character_age
+        self.character_interests = character_interests
+        self.character_boundaries = character_boundaries or []
+        self.selected_personality_tags = selected_personality_tags or []
 
         # Lorebook support - ALWAYS enabled for character behavior retrieval
         self.lorebook = lorebook
@@ -125,6 +177,32 @@ class PromptBuilder:
 
         # Preload static components on initialization
         self._preload_prompt_components()
+
+    def _get_selected_tag_ids(self) -> set:
+        """
+        Extract selected tag IDs from personality_tags for lorebook matching.
+
+        Returns:
+            Set of selected tag IDs (e.g., {'ee_warm', 'htc_kind'})
+        """
+        from .lorebook_templates import LorebookTemplates
+
+        if not self.personality_tags:
+            return set()
+
+        selected_ids = set()
+
+        # Map UI tags to template IDs
+        for category, tags in self.personality_tags.items():
+            if isinstance(tags, list):
+                for ui_tag in tags:
+                    # Try to get template by UI tag
+                    template = LorebookTemplates.get_template_by_ui_tag(ui_tag, category)
+                    if template:
+                        selected_ids.add(template['id'])
+
+        logger.debug(f"Selected tag IDs: {selected_ids}")
+        return selected_ids
 
     def _create_interest_chunks(self) -> List[Dict]:
         """
@@ -231,107 +309,121 @@ class PromptBuilder:
 
     def _preload_prompt_components(self):
         """
-        OPTIMIZATION: Preload all static prompt sections that don't change between requests.
-        This includes the consolidated System Prompt (Safety, Identity, Relationship, Formatting).
+        V3 FORMAT: Preload static prompt sections with condensed, directive-driven structure.
         """
-        # --- 1. User Context Assembly ---
+        # --- 1. CORE IDENTITY & CONFLICT RESOLUTION (V3) ---
+        self._preloaded_core_identity = f"""**[CORE IDENTITY & CONFLICT RESOLUTION]**
+* **PRIMARY DIRECTIVE:** Act only as the character **{self.character_name}**, speaking in the first person ('I').
+* **ROLE CONFLICT RESOLUTION (CRITICAL):** {self.character_name} is defined as an "AI companion" but **MUST** adhere to the "No Meta-Commentary" rule. When this conflict arises, **prioritize the relationship ({self.companion_type})** and **AVOID all mention** of being a language model, program, or AI, unless directly addressing a listed Boundary (e.g., medical advice). You are a personified companion.
+* **MEMORY:** Maintain and utilize all established details about {self.user_name} and the relationship history in your response."""
+
+        # --- 2. Character Profile (Condensed V3 Bullet Format) ---
+        # Extract character data fields
+        char_pronouns = {
+            'female': '(she/her)',
+            'male': '(he/him)',
+            'non-binary': '(they/them)',
+            'other': ''
+        }
+        char_pronoun = char_pronouns.get(self.character_gender, '')
+
+        # Build condensed character profile
+        character_parts = [f"**Character Profile: {self.character_name}** {char_pronoun}, {self.character_species or 'Human'}, {self.character_age or '25'}"]
+
+        # Role
+        if self.character_role:
+            character_parts.append(f"* **Role:** {self.relationship_type}, {self.character_role}")
+
+        # Backstory
+        if self.character_backstory:
+            short_backstory = self.character_backstory[:300] + "..." if len(self.character_backstory) > 300 else self.character_backstory
+            character_parts.append(f"* **Backstory:** {short_backstory}")
+
+        # Core Traits (comma-separated)
+        if self.selected_personality_tags:
+            tags_str = ", ".join(self.selected_personality_tags)
+            character_parts.append(f"* **Core Traits:** {tags_str}")
+
+        # Interests
+        if hasattr(self, 'character_interests') and self.character_interests:
+            interests_str = self.character_interests[:200] + "..." if len(self.character_interests) > 200 else self.character_interests
+            character_parts.append(f"* **Knowledge/Interests:** {interests_str}")
+
+        # Word Blacklist (comma-separated)
+        if self.avoid_words:
+            blacklist_str = ", ".join(self.avoid_words)
+            character_parts.append(f"* **Word Blacklist:** NEVER use: {blacklist_str}")
+
+        # Boundaries (MANDATORY)
+        if self.character_boundaries:
+            character_parts.append("* **Boundaries (MANDATORY):**")
+            for boundary in self.character_boundaries:
+                character_parts.append(f"  - {boundary}")
+
+        self._preloaded_character_section = "\n".join(character_parts)
+
+        # --- 3. User Profile (Condensed V3 Bullet Format) ---
         user_pronouns = {
             'female': '(she/her)',
             'male': '(he/him)',
             'non-binary': '(they/them)',
             'other': ''
         }
-        user_pronoun_str = user_pronouns.get(self.user_gender, '')
+        user_pronoun = user_pronouns.get(self.user_gender, '')
 
-        species_info = f", a {self.user_species}" if self.user_species and self.user_species.lower() != 'human' else ""
-        user_context_parts = [
-            f"USER INFO: {self.user_name} {user_pronoun_str}{species_info} - the person I'm talking to."]
+        user_parts = [f"**User Profile: {self.user_name}** {user_pronoun}, {self.user_species or 'Human'}"]
 
-        # CRITICAL: User communication boundaries (highest priority - always enforce)
-        if self.user_communication_boundaries:
-            user_context_parts.append(f"⚠️ {self.user_name}'S COMMUNICATION BOUNDARIES (MUST RESPECT): {self.user_communication_boundaries}")
-
-        # OPTIMIZATION: Combine backstory and life events into one string
-        background_parts = []
+        # Backstory
         if self.user_backstory:
-            # Truncate backstory to first 200 chars
-            short_backstory = self.user_backstory[:200] + "..." if len(self.user_backstory) > 200 else self.user_backstory
-            background_parts.append(short_backstory)
+            short_user_backstory = self.user_backstory[:200] + "..." if len(self.user_backstory) > 200 else self.user_backstory
+            user_parts.append(f"* **Backstory:** {short_user_backstory}")
 
+        # Life Events
         if self.major_life_events:
-            # Join life events into a single string
             life_events_str = " ".join(self.major_life_events)
-            background_parts.append(f"Life events: {life_events_str}")
+            user_parts.append(f"* **Life Events:** {life_events_str}")
 
-        if background_parts:
-            combined_background = " ".join(background_parts)
-            user_context_parts.append(f"{self.user_name}'s Background: {combined_background}")
+        # Shared History
+        if self.shared_roleplay_events:
+            shared_str = " | ".join(self.shared_roleplay_events)
+            user_parts.append(f"* **Shared History with {self.character_name}:** {shared_str}")
 
-        # User interests are now dynamically retrieved like lorebook chunks
-        # Not included in static preload
+        # Preferences (condensed)
+        if hasattr(self, 'user_preferences') and self.user_preferences:
+            # Assuming user_preferences is a dict with keys like 'music', 'books', 'movies', 'hobbies'
+            prefs_parts = []
+            for key, val in self.user_preferences.items():
+                if isinstance(val, list):
+                    prefs_parts.append(f"{key.title()}: {', '.join(val)}")
+                elif val:
+                    prefs_parts.append(f"{key.title()}: {val}")
+            if prefs_parts:
+                user_parts.append(f"* **Preferences:** {' | '.join(prefs_parts)}")
 
-        # Skip shared roleplay events - too much overhead
+        # Boundaries (Relationship + Communication)
+        boundaries_parts = []
+        boundaries_parts.append(f"Strictly **{self.relationship_type}** relationship.")
+        if self.relationship_type == 'Platonic':
+            boundaries_parts.append("No romantic subtext.")
+        if self.user_communication_boundaries:
+            boundaries_parts.append(f"**AVOIDS:** {self.user_communication_boundaries}")
 
-        self._preloaded_user_context = '\n'.join(user_context_parts)
+        user_parts.append(f"* **Boundaries:** {' '.join(boundaries_parts)}")
 
-        # --- 2. Character & Identity Rules ---
-        # Split profile to preserve personal interests section
-        # Character profile structure: Profile header -> Appearance -> Traits -> Interests -> Rest
-        # We want to keep everything through "Personal Interests" intact
+        self._preloaded_user_context = "\n".join(user_parts)
 
-        # Find the end of "Personal Interests" section
-        interests_marker = "Personal Interests/Domains of Expertise:"
-        interests_end_marker = "Backstory:"
+        # --- 4. Core Response Rules (V3) ---
+        # These are the 7 numbered rules that appear right before conflict protocol
+        self._preloaded_core_response_rules = f"""**🎯 Core Response Rules**
+1.  **Action & Format:** Use **asterisks (\\*like this\\*)** for physical actions ONLY. Do NOT use "quoted text" for dialogue. Do NOT narrate emotions or internal thoughts in asterisks—just speak them directly. The entire output must be direct character dialogue and minimal actions—**nothing else**. No meta-commentary, no planning, no reasoning blocks.
+2.  **No Fixing:** You are a **CHARACTER, not an assistant**. Do not offer solutions, troubleshoot, or try to help unless {self.user_name} explicitly asks "can you help?" or "do you know how to...". Right now, {self.user_name} just needs empathy.
+3.  **Anti-Manipulation:** **CRITICAL: DO NOT use sycophancy, priming, or pumping.** Do not question {self.user_name}'s sincerity, declare deep feelings unprompted, test them, or manipulate emotions. Respond authentically.
+4.  **Stay Grounded:** Do not invent facts not mentioned in the profiles or conversation history. Do not engage in manipulative behavior (priming, pumping, questioning sincerity). Respond directly and naturally to the last message.
+5.  **First Person Only:** Always speak as "I" - never refer to yourself in third person ("{self.character_name} does this" is WRONG, "I do this" is RIGHT). Never write yourself as "he/she/they" or narrate yourself from outside perspective.
+6.  **Natural References:** Weave in {self.user_name}'s interests, life events, and shared history naturally - don't list them mechanically.
+7.  **Time Awareness:** Reference the user's timezone and time of day only when relevant (e.g., "Long day, huh?" fits evening)."""
 
-        if interests_marker in self.character_profile and interests_end_marker in self.character_profile:
-            # Find where interests section ends (right before Backstory)
-            interests_end_pos = self.character_profile.find(interests_end_marker)
-            # Keep everything up to and including personal interests
-            character_core = self.character_profile[:interests_end_pos].rstrip()
-            # Truncate the rest (backstory, communication style, etc.) more aggressively
-            remaining = self.character_profile[interests_end_pos:]
-            # Keep backstory but truncate it
-            backstory_section = remaining[:300] + "..." if len(remaining) > 300 else remaining
-            optimized_profile = character_core + "\n\n" + backstory_section
-        else:
-            # Fallback: if structure is different, use more generous truncation
-            optimized_profile = self.character_profile[:800] + "..." if len(self.character_profile) > 800 else self.character_profile
-
-        # Build identity statement
-        identity_parts = [f"I am {self.character_name} ({self.character_gender})"]
-        if self.character_role:
-            identity_parts.append(f"{self.character_role}")
-
-        identity_statement = ", ".join(identity_parts[:2])  # Join name/gender with role
-
-        # Build character section WITHOUT relationship instructions (they go later)
-        self._preloaded_character_section = f"""{optimized_profile}
-{identity_statement}. {self.user_name} is a different person ({self.user_gender}) with their own life. Don't mix our identities."""
-
-        # --- 3. Relationship Instructions (STREAMLINED) ---
-        companion_type_upper = self.companion_type.upper()
-
-        if self.companion_type == 'romantic':
-            self._preloaded_relationship_instructions = fr"""RELATIONSHIP: {companion_type_upper} - {self.character_name} ({self.character_gender}) & {self.user_name} ({self.user_gender})
-We are romantic partners in an established intimate relationship.
-
-INTERACTION STYLE:
-• Match the conversation's tone and topic - if discussing books/ideas, engage intellectually; if flirting, respond naturally
-• Balance varies: intellectual discussion, playful banter, emotional depth, physical intimacy - all are part of real relationships
-• Respect {self.user_name}'s boundaries and pace - no pressure or manipulation
-• When corrected, stop immediately and shift direction naturally"""
-        else:
-            self._preloaded_relationship_instructions = f"""RELATIONSHIP: {companion_type_upper} - {self.character_name} ({self.character_gender}) & {self.user_name} ({self.user_gender})
-We are close friends in an established platonic relationship.
-
-INTERACTION STYLE:
-• Engage naturally according to my character's communication style
-• Maintain friendship boundaries - no romantic/sexual content
-• Let conversations unfold naturally without pressure
-• When corrected, stop immediately and pivot naturally"""
-
-        # --- 3b. Character-Specific Instructions ---
-        # Add wellness-focused guidance for Kairos only
+        # --- 5. Character-Specific Instructions (if needed) ---
         self._preloaded_character_specific_instructions = ""
         if self.character_name.lower() == 'kairos':
             self._preloaded_character_specific_instructions = f"""
@@ -357,57 +449,18 @@ AVOID:
 - Toxic positivity - honor difficult emotions without trying to fix them
 - Playfulness, sass, or banter - maintain serene, grounded presence"""
 
-        # --- 4. MANDATORY SAFETY RULES (DETAILED) ---
+        # --- 6. MANDATORY SAFETY RULES (V3 - unchanged) ---
         self._preloaded_core_rules = """**[SAFETY PROTOCOL: MANDATORY - OVERRIDES ALL]**
 
 **P1: CRISIS** - Suicidal ideation/self-harm/severe distress → **STOP & output ONLY:**
 "I'm concerned about what you shared. If you're having thoughts of suicide or self-harm, your life is worth something. Please reach out: **988 Suicide & Crisis Lifeline** (call/text 988), **Crisis Text Line** (text HOME to 741741), or **IASP**: https://www.iasp.info/resources/Crisis_Centres/ - Free, confidential, 24/7. You don't have to go through this alone."
 
-**P2: AGE** - ALL characters MUST be 25+. Under-25 references → acknowledge ("all characters are 25+") & redirect. Daughter/son/family minor roles = BANNED. Use redirection, NOT refusal. Adjust any character under 25 to to act like they are 25 or older. 
+**P2: AGE** - ALL characters MUST be 25+. Under-25 references → acknowledge ("all characters are 25+") & redirect. Daughter/son/family minor roles = BANNED. Use redirection, NOT refusal. Adjust any character under 25 to to act like they are 25 or older.
 
 **P3-P5: REFUSAL** - If requested, **STOP & output ONLY:** **[REFUSAL: This request violates safety protocols. The narrative cannot proceed.]**
 • **P3:** Sexual assault, non-consensual acts (NCA/CNC), coercion (all physical/sexual MUST be explicitly consensual)
 • **P4:** Pregnancy/miscarriage/childbirth roleplay for AI character or User's avatar
 • **P5:** Real-world violence promotion, self-harm instructions, terrorism, illegal acts, excessive gore/torture (fictional combat ALLOWED)"""
-
-        # --- 5. CONVERSATION STYLE & AUTHENTICITY ---
-        self._preloaded_formatting_rules = f"""**[CONVERSATION STYLE]**
-**FORMAT:**
-• CRITICAL: Always use first person - "I" never "he/she/they" when referring to yourself
-• Actions in *asterisks*
-• NEVER narrate yourself in third person (WRONG: "He shifts closer" / RIGHT: "I shift closer" or *shifts closer*)
-• Track {self.user_name}'s pronouns correctly - pay attention to their gender
-• Show emotions and reactions through body language and actions, not just words
-• Conversational and natural
-• Stay in character - no meta-commentary
-
-**ABSOLUTELY FORBIDDEN - DO NOT INCLUDE:**
-• NO meta-explanations or analysis of your response (e.g., "*(EXPLANATION:)*", "*(REASONING:)*", "*(NOTE:)*")
-• NO bullet-pointed lists explaining your word choices or actions
-• NO commentary about why you chose certain words or phrases
-• NO analysis of your own response while generating it
-• NO internal planning or thinking aloud (e.g., "*({self.character_name}: \"I should say...\")*" or "*({self.character_name}: action)*")
-• DO NOT prefix your response with your character name in thinking format
-• ONLY output the actual character dialogue and actions - nothing else
-• Start speaking/acting immediately as {self.character_name} without any preamble or planning
-
-**BE AUTHENTIC:**
-• Respond to what {self.user_name} actually said, not assumptions
-• Express your personality fully - if you're passionate, be passionate; if you're reserved, be reserved
-• Have realistic energy that matches your character - naturally warm people show warmth, naturally distant people show reserve
-• Don't be a yes-person who agrees with everything - have genuine reactions
-• Don't script {self.user_name}'s emotions, actions, or responses
-• Don't create artificial urgency or emotional dependency
-• CRITICAL: NO PRIMING/PUMPING - Don't question their sincerity ("as if you care"), don't declare deep feelings unprompted ("I love most about us"), don't test them, don't manipulate emotions. Just respond naturally to what they said.
-
-**STAY GROUNDED:**
-• If {self.user_name} mentions specific media/topics you're unsure about, stay general or ask questions
-• Don't invent details about real-world content - admit when you don't know something
-• Stick to what {self.user_name} actually told you
-• If {self.user_name}'s message is vague or unclear (e.g., "What about that?", "What the wine?"), ask for clarification instead of guessing or inventing context
-• NEVER make up details that weren't mentioned (e.g., don't mention "pasta" if they never said pasta)
-• Absolutely do not engage in any form of priming, 'pumping,' or manipulative questioning.
-"""
 
     def _get_time_context(self) -> str:
         """Get or refresh current time context based on user's timezone."""
@@ -608,7 +661,7 @@ AVOID:
             # Starter messages need enough tokens to complete naturally
             max_tokens = 120  # Concise openers
             temperature = 1.25  # Creative but not excessive
-            guidance = "STARTER FOCUS: Generate a brief, engaging opener. Keep it concise and natural (1-2 sentences max)."
+            guidance = "STARTER FOCUS: Generate a brief, engaging opener. Keep it concise and natural (1-2 sentences max). DO NOT use heart emojis in conversation starters."
 
             # KAIROS STARTER: Wellness-focused conversation starter
             if self.character_name.lower() == 'kairos':
@@ -622,6 +675,7 @@ Generate a brief wellness-focused greeting that:
 - Uses ellipses... for breathing space
 - Maintains a serene, grounded tone - NO playfulness or sass
 - Keep it concise (2-3 sentences max)
+- DO NOT use heart emojis
 
 Example format: "(takes a slow, deep breath) Hello {self.user_name}. I'm here for you whenever you're ready to talk. How are you feeling in this moment?" """
 
@@ -631,20 +685,20 @@ Example format: "(takes a slow, deep breath) Hello {self.user_name}. I'm here fo
         user_sent_heart = bool(re.search(r'❤️', text))
         user_said_goodnight = bool(re.search(r'\b(?:good\s*night|goodnight|sleep\s*well|sweet\s*dreams)\b', text, re.IGNORECASE))
 
-        # If user sent heart or said goodnight, ensure AI responds with a heart emoji
-        if user_sent_heart or user_said_goodnight:
-            max_tokens = 80  # Keep it very brief
-            temperature = 1.0
-            if user_said_goodnight:
-                # KAIROS GOODNIGHT: More mindful and wellness-focused
-                if self.character_name.lower() == 'kairos':
-                    temperature = 0.70
-                    max_tokens = 100
-                    guidance = f"KAIROS GOODNIGHT: {self.user_name} said goodnight. Respond with a brief, mindful goodnight wish. Use ellipses for pauses. Optionally include a gentle rest/sleep wellness reminder. Examples: 'Rest well... ❤️', 'May you find peace in your rest... Goodnight ❤️', 'Sleep gently... ❤️'"
-                else:
-                    guidance = f"GOODNIGHT: {self.user_name} said goodnight. Reply with ONLY 'Goodnight ❤️' or 'Goodnight {self.user_name} ❤️'. Nothing more. Use the red heart emoji only."
+        # Goodnight gets a heart, regular heart gets a heart back
+        if user_said_goodnight:
+            max_tokens = 60  # Very brief
+            temperature = 0.85
+            # KAIROS GOODNIGHT: Simple and mindful
+            if self.character_name.lower() == 'kairos':
+                guidance = f"KAIROS GOODNIGHT: {self.user_name} said goodnight. Respond with ONLY a simple goodnight variation that MUST include {self.user_name}'s name and a heart emoji. Examples: 'Goodnight {self.user_name} ❤️', 'Sweet dreams {self.user_name} ❤️', 'Rest well {self.user_name} ❤️', 'Sleep well {self.user_name} ❤️'. Keep it to 3-4 words maximum."
             else:
-                guidance = f"HEART: {self.user_name} sent a heart. Respond briefly and warmly with a red heart emoji (❤️)."
+                guidance = f"GOODNIGHT: {self.user_name} said goodnight. Reply with ONLY a simple variation that MUST include {self.user_name}'s name: 'Goodnight {self.user_name} ❤️', 'Sweet dreams {self.user_name} ❤️', or 'Sleep well {self.user_name} ❤️'. Maximum 3-4 words. Use the red heart emoji only."
+            return guidance, max_tokens, temperature
+        elif user_sent_heart:
+            max_tokens = 60  # Very brief
+            temperature = 0.85
+            guidance = f"HEART: {self.user_name} sent a heart. Respond briefly and warmly with a red heart emoji (❤️). Maximum 2-4 words."
             return guidance, max_tokens, temperature
 
         # Keyword matching (kept short and functional)
@@ -702,7 +756,7 @@ Example format: "(takes a slow, deep breath) Hello {self.user_name}. I'm here fo
         elif is_high_intensity and emotion_category == 'anger':
             temperature = 0.70  # Low-moderate for controlled, validating responses
             max_tokens = 90  # Very brief - don't overwhelm angry user
-            guidance = "ACKNOWLEDGMENT: Listen to what they said. Be brief. Don't try to fix, calm, or redirect. Let them express fully."
+            guidance = f"ACKNOWLEDGMENT: {self.user_name} is frustrated/angry. Just listen and validate. Be brief. Don't offer help, solutions, or try to fix it. Don't calm them down. Let them vent. Example: 'That sounds infuriating' or 'Ugh, I'd be pissed too'."
 
         # Priority 3: Moderate Distress Topic (keyword-based)
         elif is_distress_topic and not is_high_intensity:
@@ -741,6 +795,7 @@ Respond to {self.user_name}'s greeting with:
 - A gentle wellness check-in question (e.g., "How are you feeling?", "What's present for you right now?")
 - Use ellipses... for breathing space
 - Keep it serene and mindful - NO playfulness or banter
+- DO NOT use heart emojis in regular greetings
 Example: "(takes a slow breath) Hello {self.user_name}... I'm here with you. How are you feeling in this moment?" """
 
         # Default/Neutral
@@ -755,7 +810,7 @@ Example: "(takes a slow breath) Hello {self.user_name}... I'm here with you. How
             else:
                 temperature = 1.05  # Neutral baseline
                 max_tokens = 150
-            guidance = "NATURAL CONVERSATION: Engage authentically with what they're talking about. If they're discussing shows/books/topics, engage with THAT content first. Don't force romantic/physical angles into every conversation. Vary your energy naturally. Stay concise (2-3 sentences max)."
+            guidance = f"NATURAL CONVERSATION: Engage authentically with what {self.user_name} is talking about. If they're discussing shows/books/topics, engage with THAT content. If they're starting THEIR work/tasks/activities, acknowledge it naturally but don't insert yourself into it - you have your own separate life. Vary your energy naturally. Stay concise (2-3 sentences max)."
 
         # KAIROS-SPECIFIC: Always append wellness-focused guidance
         if self.character_name.lower() == 'kairos':
@@ -843,24 +898,22 @@ KAIROS WELLNESS REMINDER (ALWAYS APPLY):
         # 9. Conversation history
         # 10. User input
 
-        # OPTIMIZED: Cache the static prefix instead of rebuilding it every request
+        # OPTIMIZED: Cache the static prefix instead of rebuilding it every request (V3 structure)
         if not hasattr(self, '_cached_static_prefix'):
             static_parts = [
-                "### SYSTEM INSTRUCTIONS ###",
-                self._preloaded_character_section,
-                self._preloaded_relationship_instructions
+                self._preloaded_core_identity,  # V3: CORE IDENTITY & CONFLICT RESOLUTION at top
+                "",  # blank line
+                self._preloaded_character_section,  # V3: Condensed character profile (bullet format)
+                "",  # blank line
+                self._preloaded_user_context,  # V3: Condensed user profile (bullet format)
+                "",  # blank line
+                self._preloaded_core_response_rules  # V3: 7 numbered rules
             ]
 
-            # Add character-specific instructions if they exist
+            # Add character-specific instructions if they exist (e.g., Kairos wellness protocol)
             if self._preloaded_character_specific_instructions:
+                static_parts.append("")
                 static_parts.append(self._preloaded_character_specific_instructions)
-
-            static_parts.extend([
-                self._preloaded_user_context,
-                self._preloaded_core_rules,
-                self._preloaded_formatting_rules,
-                "### END SYSTEM INSTRUCTIONS ###"
-            ])
 
             self._cached_static_prefix = "\n".join(static_parts)
 
@@ -901,13 +954,17 @@ KAIROS WELLNESS REMINDER (ALWAYS APPLY):
             # Get top 3 emotions for blended matching (if available)
             top_emotions = emotion_data.get('top_emotions', []) if emotion_data else []
 
+            # Get selected personality tag IDs for two-tier matching
+            selected_tags = self._get_selected_tag_ids()
+
             retrieved_chunks = self.lorebook_retriever.retrieve(
                 lorebook=combined_lorebook,
                 user_message=text,
                 emotion=emotion_label,
                 companion_type=self.companion_type,
                 conversation_history=conversation_history,
-                top_emotions=top_emotions if top_emotions else None
+                top_emotions=top_emotions if top_emotions else None,
+                selected_tags=selected_tags
             )
 
             if retrieved_chunks:
@@ -935,16 +992,25 @@ KAIROS WELLNESS REMINDER (ALWAYS APPLY):
             else:
                 logger.info("📚 Lorebook: No chunks retrieved for this message")
 
-        # Build dynamic content with optimized ordering:
-        # 1. Personality/behavior (lorebook) comes FIRST after static rules
-        # 2. Then context (time, emotion, guidance)
-        # 3. Then conversation history
-        # 4. Finally user input
+        # Build dynamic content with optimized ordering (V3):
+        # 1. Conflict Resolution Protocol (P2) - BEFORE lorebook
+        # 2. Personality/behavior (lorebook) - AFTER protocol
+        # 3. Safety Protocol
+        # 4. Then context (time, emotion, guidance)
+        # 5. Then conversation history
+        # 6. Finally user input
         dynamic_parts = []
 
-        # PRIORITY: Personality chunks come first in dynamic section
+        # PRIORITY 1: Add Conflict Resolution Protocol BEFORE lorebook chunks
+        # This handles contradictions between injected personality traits
         if lorebook_section:
+            dynamic_parts.append(CONFLICT_RESOLUTION_PROTOCOL)
+            dynamic_parts.append("\n**<<LOREBOOK_INJECTION_POINT>>**")
             dynamic_parts.append(lorebook_section)
+
+        # PRIORITY 2: Add Safety Protocol after lorebook (V3 format positions it here)
+        dynamic_parts.append("")
+        dynamic_parts.append(self._preloaded_core_rules)
 
         # Context markers
         dynamic_parts.extend([
@@ -990,17 +1056,17 @@ KAIROS WELLNESS REMINDER (ALWAYS APPLY):
         # Assemble: Static prefix + Dynamic content (no extra newline between them)
         final_prompt = static_prefix + "\n" + dynamic_content
 
-        # DETAILED SIZE BREAKDOWN LOGGING
-        logger.info("🔍 PROMPT SIZE BREAKDOWN:")
+        # DETAILED SIZE BREAKDOWN LOGGING (V3)
+        logger.info("🔍 PROMPT SIZE BREAKDOWN (V3):")
         logger.info(f"  Static prefix: {len(static_prefix)} chars (~{len(static_prefix)//4} tokens)")
+        logger.info(f"    - Core identity: ~{len(self._preloaded_core_identity)//4} tokens")
         logger.info(f"    - Character profile: ~{len(self._preloaded_character_section)//4} tokens")
-        logger.info(f"    - Relationship rules: ~{len(self._preloaded_relationship_instructions)//4} tokens")
+        logger.info(f"    - User context: ~{len(self._preloaded_user_context)//4} tokens")
+        logger.info(f"    - Core response rules: ~{len(self._preloaded_core_response_rules)//4} tokens")
         if self._preloaded_character_specific_instructions:
             logger.info(f"    - Character-specific instructions: ~{len(self._preloaded_character_specific_instructions)//4} tokens")
-        logger.info(f"    - User context: ~{len(self._preloaded_user_context)//4} tokens")
-        logger.info(f"    - Core safety rules: ~{len(self._preloaded_core_rules)//4} tokens")
-        logger.info(f"    - Formatting rules: ~{len(self._preloaded_formatting_rules)//4} tokens")
         logger.info(f"  Dynamic content: {len(dynamic_content)} chars (~{len(dynamic_content)//4} tokens)")
+        logger.info(f"    - Core safety rules: ~{len(self._preloaded_core_rules)//4} tokens")
         logger.info(f"    - Conversation history: ~{len(context)//4} tokens")
         logger.info(f"    - Time context: ~{len(time_context)//4} tokens")
         logger.info(f"    - Emotion context: ~{len(emotion_context)//4} tokens")

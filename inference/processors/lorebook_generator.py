@@ -64,16 +64,19 @@ class LorebookGenerator:
             for tag in tags:
                 template = self.templates.get_template_by_ui_tag(tag, category)
                 if template:
+                    # V4 format: Templates have emotion_responses instead of static content
+                    # Pass the entire template structure for dynamic retrieval
                     chunks.append({
                         "id": template["id"],
                         "category": template["category"],
                         "priority": template["priority"],
-                        "tokens": template.get("tokens", 100),
+                        "tokens": template.get("tokens", 100),  # Average token estimate
                         "triggers": template.get("triggers", {}),
-                        "content": template["content"],
+                        "emotion_responses": template.get("emotion_responses", {}),  # V4: emotion-specific responses
                         "source": "tag_matched",
                         "ui_tag": template.get("ui_tag"),
-                        "ui_category": category
+                        "ui_category": category,
+                        "requires_selection": template.get("requires_selection", False)
                     })
                     tag_matched_count += 1
                 else:
@@ -161,20 +164,36 @@ class LorebookGenerator:
             category: Optional category for disambiguation
 
         Returns:
-            First 150 chars of content, or None if not found
+            Summary of emotion responses, or None if not found
         """
         template = self.templates.get_template_by_ui_tag(ui_tag, category)
         if not template:
             return None
 
-        content = template["content"]
-        # Extract just the main instruction, skip the header
-        lines = content.split('\n')
-        main_content = '\n'.join(lines[2:]) if len(lines) > 2 else content
+        # V4 format: Show preview of emotion responses
+        emotion_responses = template.get("emotion_responses", {})
+        if not emotion_responses:
+            return "No emotion responses defined"
 
-        if len(main_content) > 150:
-            return main_content[:150] + "..."
-        return main_content
+        # Get the default response as preview
+        default_response = emotion_responses.get("default", {})
+        if default_response:
+            tone = default_response.get("tone", "")
+            action = default_response.get("action", "")
+            preview = f"Tone: {tone}. Action: {action}"
+            if len(preview) > 150:
+                return preview[:150] + "..."
+            return preview
+
+        # Otherwise show first available emotion
+        first_emotion = next(iter(emotion_responses.keys()))
+        first_response = emotion_responses[first_emotion]
+        tone = first_response.get("tone", "")
+        action = first_response.get("action", "")
+        preview = f"[{first_emotion}] Tone: {tone}. Action: {action}"
+        if len(preview) > 150:
+            return preview[:150] + "..."
+        return preview
 
     def get_available_tags(self) -> Dict[str, List[str]]:
         """

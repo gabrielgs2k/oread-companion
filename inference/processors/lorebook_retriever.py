@@ -26,6 +26,7 @@ class LorebookRetriever:
             max_chunks: Maximum number of chunks to retrieve (excluding always_include)
         """
         self.max_chunks = max_chunks
+        self.selected_tags = set()  # User-selected personality tags
 
     def retrieve(
         self,
@@ -34,7 +35,8 @@ class LorebookRetriever:
         emotion: str = 'neutral',
         companion_type: Optional[str] = None,
         conversation_history: Optional[List[Dict]] = None,
-        top_emotions: Optional[List[tuple]] = None
+        top_emotions: Optional[List[tuple]] = None,
+        selected_tags: Optional[Set[str]] = None
     ) -> List[Dict[str, Any]]:
         """
         Retrieve relevant lorebook chunks for current context.
@@ -46,10 +48,14 @@ class LorebookRetriever:
             companion_type: Type of companion ('romantic', 'friend', etc.)
             conversation_history: Recent conversation history
             top_emotions: Optional list of (emotion, confidence) tuples for blended matching
+            selected_tags: Set of user-selected tag IDs (e.g., {'ee_warm', 'htc_kind'})
 
         Returns:
             List of relevant chunks, sorted by priority
         """
+        # Store selected tags for use in scoring
+        if selected_tags:
+            self.selected_tags = selected_tags
         if not lorebook or "chunks" not in lorebook:
             logger.warning("Empty or invalid lorebook provided")
             return []
@@ -157,7 +163,89 @@ class LorebookRetriever:
             f"~{total_tokens} tokens"
         )
 
-        return final_chunks
+        # Process new-style emotion-response chunks
+        processed_chunks = self._process_emotion_response_chunks(
+            final_chunks,
+            emotion,
+            top_emotions
+        )
+
+        return processed_chunks
+
+    def _process_emotion_response_chunks(
+        self,
+        chunks: List[Dict[str, Any]],
+        emotion: str,
+        top_emotions: Optional[List[tuple]] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        Process chunks with emotion_responses format to generate emotion-specific content.
+
+        Args:
+            chunks: List of chunks to process
+            emotion: Primary detected emotion
+            top_emotions: List of top emotions with confidence scores
+
+        Returns:
+            List of processed chunks with content field populated
+        """
+        processed = []
+
+        for chunk in chunks:
+            # Check if this is a new-style chunk with emotion_responses
+            if "emotion_responses" in chunk:
+                emotion_responses = chunk["emotion_responses"]
+
+                # Try to find the best matching emotion response
+                matched_emotion = None
+                matched_response = None
+
+                # First, try exact match with primary emotion
+                if emotion in emotion_responses:
+                    matched_emotion = emotion
+                    matched_response = emotion_responses[emotion]
+                # Then try top_emotions if available
+                elif top_emotions:
+                    for item in top_emotions:
+                        if isinstance(item, dict):
+                            emo = item.get('label')
+                        else:
+                            emo = item[0] if isinstance(item, tuple) else None
+
+                        if emo and emo in emotion_responses:
+                            matched_emotion = emo
+                            matched_response = emotion_responses[emo]
+                            break
+
+                # Fallback to default
+                if not matched_response:
+                    matched_response = emotion_responses.get("default", {})
+                    matched_emotion = "default"
+
+                # Create new chunk with formatted content
+                new_chunk = chunk.copy()
+
+                # Format content from tone + action
+                tone = matched_response.get("tone", "")
+                action = matched_response.get("action", "")
+
+                content = f"**Tone:** {tone}\n\n**Action:** {action}"
+                new_chunk["content"] = content
+
+                # Update tokens from emotion-specific response
+                new_chunk["tokens"] = matched_response.get("tokens", chunk.get("tokens", 70))
+
+                logger.debug(
+                    f"Processed '{chunk['id']}' with emotion '{matched_emotion}': "
+                    f"tone='{tone[:30]}...', action='{action[:30]}...'"
+                )
+
+                processed.append(new_chunk)
+            else:
+                # Old-style chunk with pre-set content
+                processed.append(chunk)
+
+        return processed
 
     def _score_chunk(
         self,
@@ -183,6 +271,51 @@ class LorebookRetriever:
             Relevance score (0 = not relevant, higher = more relevant)
         """
         score = 0
+
+        # NEW: Check if this chunk requires user selection
+        requires_selection = chunk.get("requires_selection", False)
+        chunk_id = chunk.get("id", "")
+
+        if requires_selection:
+            # Only score this chunk if user has selected it
+            if chunk_id not in self.selected_tags:
+                logger.debug(f"Chunk '{chunk_id}' requires selection but not selected - skipping")
+                return 0  # Not selected, don't include
+            else:
+                # User selected this tag - give it a base score boost
+                score += 30
+                logger.debug(f"Chunk '{chunk_id}' is selected - base +30 points")
+
+        # Check for new-style emotion_responses format
+        if "emotion_responses" in chunk:
+            emotion_responses = chunk["emotion_responses"]
+
+            # Score based on whether we have a matching emotion response
+            # Try primary emotion
+            if emotion in emotion_responses:
+                score += 40  # Strong match
+                logger.debug(f"Chunk '{chunk_id}': +40 points (exact emotion match: {emotion})")
+            elif top_emotions:
+                # Try top emotions
+                for item in top_emotions[:3]:
+                    if isinstance(item, dict):
+                        emo = item.get('label')
+                        confidence = item.get('score', 1.0)
+                    else:
+                        emo, confidence = item
+
+                    if emo in emotion_responses:
+                        points = int(30 * confidence)
+                        score += points
+                        logger.debug(f"Chunk '{chunk_id}': +{points} points (emotion '{emo}' @ {confidence:.2f})")
+                        break
+            elif "default" in emotion_responses:
+                score += 10  # Has fallback
+                logger.debug(f"Chunk '{chunk_id}': +10 points (has default response)")
+
+            return score  # For new-style chunks, emotion matching is the primary logic
+
+        # OLD-STYLE CHUNK LOGIC (with triggers)
         triggers = chunk.get("triggers", {})
 
         # Detect intensity/tone modifiers in the message

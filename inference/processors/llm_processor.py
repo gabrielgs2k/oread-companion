@@ -357,6 +357,15 @@ class LLMProcessor:
                 memory_context=memory_context
             )
 
+            # LOG FULL RAW PROMPT FOR DEBUGGING
+            logger.info("=" * 80)
+            logger.info("COMPLETE RAW PROMPT (V3 FORMAT):")
+            logger.info("=" * 80)
+            logger.info(prompt)
+            logger.info("=" * 80)
+            logger.info(f"TOTAL PROMPT SIZE: {len(prompt)} chars (~{len(prompt)//4} tokens)")
+            logger.info("=" * 80)
+
             logger.debug(f"Prompt length: {len(prompt)} chars")
             logger.debug(f"Generation params: max_tokens={max_tokens}, temp={temperature}")
 
