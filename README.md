@@ -4,7 +4,7 @@
 
 **Self-hosted AI companion that actually respects your privacy**
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: Non-Commercial](https://img.shields.io/badge/License-Non--Commercial-blue.svg)](LICENSE)
 [![Privacy: Local Only](https://img.shields.io/badge/Privacy-Local%20Only-green.svg)]()
 [![Status: Pre-Release](https://img.shields.io/badge/Status-Pre--Release-orange.svg)]()
 
@@ -214,23 +214,27 @@ Full details: [SECURITY_ETHICS_SAFETY.md](SECURITY_ETHICS_SAFETY.md)
 
 ## License (TL;DR)
 
-**Open source, but with guardrails.**
+**Open source for non-commercial use only.**
 
-Licensed under **AGPL-3.0** with restrictions:
+Licensed under **Oread Non-Commercial License v1.0**:
 
 ### You CAN:
-- ✅ Use it for free
+- ✅ Use it for free (personal, educational, research)
 - ✅ Modify the code
 - ✅ Study how it works
 - ✅ Contribute improvements
+- ✅ Share modifications (under same license)
 
 ### You CANNOT:
-- ❌ Use it commercially
+- ❌ Use it commercially or for profit
+- ❌ Sell, resell, or sublicense it
+- ❌ Use it in SaaS or paid services
 - ❌ Remove safety features
-- ❌ Rebrand as "official Oread"
-- ❌ Keep your modifications private (AGPL requires sharing)
+- ❌ Remove attribution or license notices
 
-**Bottom line:** Free to use, must stay open source, don't be evil.
+**Bottom line:** Free for personal use. No commercial use or resale. Safety features required. Attribution required.
+
+**Need commercial licensing?** Contact the author.
 
 Full license: [LICENSE](LICENSE)
 

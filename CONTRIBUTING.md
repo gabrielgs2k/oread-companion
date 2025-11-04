@@ -285,9 +285,10 @@ This is a small project. Be patient with reviews—we'll get to your contributio
 ## License
 
 By contributing, you agree:
-- Your code will be licensed under AGPL-3.0
-- You retain copyright but grant usage rights
-- Your changes remain open source
+- Your code will be licensed under Oread Non-Commercial License v1.0
+- You retain copyright but grant usage rights for non-commercial use
+- Your changes remain open source and non-commercial
+- No commercial use or resale is permitted
 - You accept the safety requirements
 
 ---
