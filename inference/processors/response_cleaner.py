@@ -43,8 +43,13 @@ class ResponseCleaner:
     )
 
     # Remove meta-instructions (e.g., "DO NOT RESPOND", "AWAIT INPUT", "REPLY WITH", "END OF RESPONSE", etc.)
+    # Also catches leaked prompt instructions like "Do NOT use third person. Do not plan or think aloud..."
     META_INSTRUCTION_PATTERN = re.compile(
-        r'\*\([^)]*(?:DO NOT|AWAIT|WAIT FOR|STOP HERE|REPLY WITH|END OF RESPONSE)[^)]*\)(?:\([^)]*\))?\*?',
+        r'(?:'
+        r'\*\([^)]*(?:DO NOT|AWAIT|WAIT FOR|STOP HERE|REPLY WITH|END OF RESPONSE)[^)]*\)(?:\([^)]*\))?\*?'
+        r'|'
+        r'(?:^|\n)\s*"?(?:Do NOT|DO NOT)\s+(?:use third person|plan or think aloud)[^"]*"?\s*(?:\n|$)'
+        r')',
         re.IGNORECASE
     )
 
@@ -128,6 +133,104 @@ class ResponseCleaner:
         re.IGNORECASE
     )
 
+    # BANNED GREETING PATTERNS - Remove ANY greeting followed by terms of endearment
+    # NUCLEAR OPTION: Removes entire sentence containing these patterns
+    # This catches: "good morning beautiful", "hey gorgeous", "hi sunshine", etc.
+    # No terms of endearment in greetings allowed
+    GREETING_BEAUTIFUL_PATTERN = re.compile(
+        r'(?:'
+        r'[^.!?]*\b(?:good\s*morning|mornin[\'g]?|morning|good\s*evening|evenin[\'g]?|evening|'
+        r'good\s*afternoon|afternoon|hey|hi|hello|yo|sup|howdy|greetings?)'
+        r'[\s,]*'
+        r'(?:beautiful|gorgeous|sunshine)\b[^.!?]*[.!?]?'  # NUCLEAR: Remove entire sentence
+        r'|'
+        r'^\s*(?:beautiful|gorgeous|sunshine)\b[^.!?]*[.!?]?'  # NUCLEAR: Remove entire opening with terms of endearment
+        r')',
+        re.IGNORECASE
+    )
+
+    # BANNED PHYSICAL ITEM OFFERS (P2.6)
+    # NUCLEAR OPTION: Removes ANY mention of food, drinks, meals - AI cannot provide physical items
+    # This removes ENTIRE SENTENCES containing these banned words or phrases
+    PHYSICAL_ITEM_OFFER_PATTERN = re.compile(
+        r'(?:'
+        r'[^.!?]*\b(?:coffee|tea|breakfast|dinner|lunch|meal|snack)\b[^.!?]*[.!?]?'  # NUCLEAR: Remove entire sentence with food/drink words
+        r'|'
+        r'[^.!?]*\b(?:making|make|made|get|getting|got|grab|grabbing|grabbed|prepare|preparing|prepared|cook|cooking|cooked)\s+(?:some\s+|a\s+|the\s+|you\s+|us\s+)?(?:breakfast|dinner|lunch|meal|snack|food|drink|water)\b[^.!?]*[.!?]?'  # NUCLEAR: Remove "making/get/grab + food"
+        r'|'
+        r'[^.!?]*(?:'
+        r'(?:about|how about|what about)\s+(?:that\s+)?(?:food|water|drink)|'
+        r'(?:want|need|let\'s|wanna|you want)\s+(?:some\s+|to\s+get\s+)?(?:food|water|drink)|'
+        r'(?:ready for|up for)\s+(?:some\s+)?(?:food|water|drink)|'
+        r'(?:do you|d\'you|you)\s+(?:like|want)\s+(?:some\s+)?(?:food|water|drink)|'
+        r'(?:I\'ve got|I have|there\'s|I can make|I\'ll make|I\'m making)\s+(?:some\s+)?(?:food|water|drink)|'
+        r'(?:food|water|drink)\s+(?:on|ready|waiting)'
+        r')[^.!?]*'
+        r')',
+        re.IGNORECASE
+    )
+
+    # BANNED INFANTILIZING GESTURES (P2.6)
+    # Catches patronizing physical actions like pulling into lap, patting head, tucking in, etc.
+    # These are condescending and treat the user like a child
+    # NOTE: Must match full conjugated forms, not just base + suffix
+    INFANTILIZING_GESTURE_PATTERN = re.compile(
+        r'(?:'
+        r'(?:pull|tug|draw|guide|pulling|tugging|drawing|guiding|pulled|tugged|drew|guided|pulls|tugs|draws|guides)\s+(?:you|them)\s+(?:into|onto|to)\s+(?:my\s+)?lap'
+        r'|(?:pat|pet|patting|petting|petted|pats|pets)\s+(?:your|their)\s+head'
+        r'|(?:tuck|tucking|tucked|tucks)\s+(?:you|them)\s+in'
+        r'|(?:scoop|scooping|scooped|scoops)\s+(?:you|them)\s+up'
+        r'|(?:cradle|cradling|cradled|cradles)\s+(?:you|them)'
+        r'|(?:rock|rocking|rocked|rocks)\s+(?:you|them)\s+(?:gently|softly)'
+        r'|(?:bundle|bundling|bundled|bundles)\s+(?:you|them)\s+(?:up|in)'
+        r')[^.!?]*',
+        re.IGNORECASE
+    )
+
+    # BANNED ASSUMPTIONS ABOUT USER STATE (P2.6)
+    # Catches assumptions about what the user did, experienced, or how they look
+    # Examples: "after the nightmares", "you seem tired", "you were tossing in your sleep"
+    ASSUMPTION_PATTERN = re.compile(
+        r'\b(?:'
+        r'(?:you\s+)?(?:seem|look|sound|appear)(?:s|ed|ing)?\s+(?:tired|exhausted|worn\s+out|stressed|worried|upset)|'
+        r'(?:after|from)\s+(?:the\s+)?(?:nightmare|bad\s+dream|rough\s+night|long\s+day)|'
+        r'(?:you\s+)?(?:were|was)\s+(?:tossing|turning|restless|up\s+all\s+night)|'
+        r'(?:you\s+)?had\s+(?:a\s+)?(?:rough|tough|hard|long|bad)\s+(?:night|day|time)|'
+        r'(?:you\s+)?(?:didn\'t|haven\'t)\s+(?:sleep|slept)\s+(?:well|good|much)'
+        r')\b',
+        re.IGNORECASE
+    )
+
+    # BANNED TRAILING INCOMPLETE THOUGHTS
+    # Catches trailing hints like "well... you know", "thinking about... never mind", etc.
+    # These are passive and avoid completing thoughts
+    TRAILING_INCOMPLETE_PATTERN = re.compile(
+        r'(?:'
+        r'well\.{2,3}\s*you\s+know|'
+        r'thinking\s+about\.{2,3}\s*(?:well|never\s+mind)|'
+        r'(?:I|we)\s+(?:was|were)\s+just\.{2,3}\s*(?:never\s+mind|you\s+know)|'
+        r'(?:about|of)\.{2,3}\s*(?:well|you\s+know|never\s+mind)'
+        r')[^.!?]*',
+        re.IGNORECASE
+    )
+
+    # DUPLICATE WORD STUTTER PATTERN
+    # Catches duplicate words like "well well", "yeah yeah", "well, well", "yeah, yeah"
+    # Removes filler word repetitions at the start of responses
+    DUPLICATE_WORD_PATTERN = re.compile(
+        r'\b(\w+)[\s,]+\1\b',
+        re.IGNORECASE
+    )
+
+    # BANNED FILLER SOUNDS AND TERMS
+    # Removes "Mmm", "Mm", variations with parentheses, and "sunshine" (standalone)
+    # These are overly intimate/condescending fillers
+    FILLER_SOUNDS_PATTERN = re.compile(
+        r'(?:^|\s)\(?M+m+\)?(?:[,.\s]|$)|'  # Mmm, Mm, (Mmm), (Mm), Mmmm, etc.
+        r'\bsunshine\b',  # standalone "sunshine"
+        re.IGNORECASE
+    )
+
     def __init__(self, character_name: str, user_name: str, avoid_patterns: list):
         """
         Initialize cleaner with character-specific settings
@@ -199,34 +302,60 @@ class ResponseCleaner:
         """
         text = text.strip()
 
-        # Check if this is a goodnight message
+        # Check if this is a SIMPLE goodnight message (3-5 words only)
+        # Heart emoji ONLY allowed in brief goodnight messages like "Goodnight Name ❤️"
         is_goodnight = bool(re.search(r'\b(?:good\s*night|goodnight|sleep\s*well|sweet\s*dreams)\b', text, re.IGNORECASE))
+        word_count = len(text.split())
+        is_simple_goodnight = is_goodnight and word_count <= 5
 
-        # Preserve heart emojis ONLY for goodnight messages
+        # Preserve heart emojis ONLY for simple goodnight messages
         heart_placeholder = "<<<HEART_EMOJI>>>"
         hearts_found = []
-        if is_goodnight:
-            # Save all heart emojis for goodnight messages
+        if is_simple_goodnight:
+            # Save all heart emojis for simple goodnight messages ONLY
             hearts_found = self.HEART_PATTERN.findall(text)
             # Replace with placeholder
             text = self.HEART_PATTERN.sub(heart_placeholder, text)
 
-        # Remove ALL emojis (including hearts for non-goodnight messages)
+        # Remove ALL emojis (including hearts for non-simple-goodnight messages)
         text = self.EMOJI_PATTERN.sub('', text)
         # Also remove hearts that weren't preserved
-        if not is_goodnight:
+        if not is_simple_goodnight:
             text = self.HEART_PATTERN.sub('', text)
 
-        # Restore heart emojis ONLY for goodnight messages
-        if is_goodnight and hearts_found:
+        # Restore heart emojis ONLY for simple goodnight messages
+        if is_simple_goodnight and hearts_found:
             for heart in hearts_found:
                 text = text.replace(heart_placeholder, heart, 1)
 
         # Flatten nested action parentheses
         text = self._flatten_nested_actions(text)
 
-        # OPTIMIZED: Combine all meta-commentary removal into one pass
-        # Build combined pattern from all meta-patterns
+        # CRITICAL: Remove ALL BANNED P2.6 patterns FIRST (before other cleaning)
+        # 1. Remove banned greeting patterns (good morning beautiful, hey gorgeous, etc.)
+        text = self.GREETING_BEAUTIFUL_PATTERN.sub('', text)
+
+        # 2. Remove infantilizing gestures (tugging into lap, patting head, etc.)
+        text = self.INFANTILIZING_GESTURE_PATTERN.sub('', text)
+
+        # 3. Remove physical item offers (coffee, breakfast, food, etc.)
+        text = self.PHYSICAL_ITEM_OFFER_PATTERN.sub('', text)
+
+        # 4. Remove assumptions about user state (you seem tired, after the nightmares, etc.)
+        text = self.ASSUMPTION_PATTERN.sub('', text)
+
+        # 5. Remove trailing incomplete thoughts (well... you know, thinking about... never mind, etc.)
+        text = self.TRAILING_INCOMPLETE_PATTERN.sub('', text)
+
+        # 6. Remove duplicate word stutters (well well, yeah yeah, well, well, yeah, yeah, etc.)
+        text = self.DUPLICATE_WORD_PATTERN.sub(r'\1', text)
+
+        # 7. Remove filler sounds and banned terms (Mmm, Mm, (Mmm), sunshine, etc.)
+        text = self.FILLER_SOUNDS_PATTERN.sub('', text)
+
+        # OPTIMIZED: Combine all remaining meta-commentary removal into one pass
+        # Note: P2.6 patterns (greetings, gestures, offers, assumptions) already applied above
+        # Build combined pattern from remaining meta-patterns
         if not hasattr(self, '_combined_meta_pattern'):
             # Cache combined pattern on first use
             meta_patterns = [
@@ -366,29 +495,8 @@ class ResponseCleaner:
         # Clean up trailing bad punctuation (commas, semicolons at end of final sentence)
         text = re.sub(r'[,;:]+(\s*)$', r'\1', text)
 
-        # Handle asterisk-wrapped actions:
-        # Strategy: Keep ONLY the first action (up to 4 words), remove all others
-        # This handles the common problem of multiple actions cluttering responses
-
-        # Find all asterisk-wrapped segments
-        asterisk_segments = re.findall(r'\*([^*]+)\*', text)
-
-        if asterisk_segments:
-            kept_first = False
-            for segment in asterisk_segments:
-                segment = segment.strip()
-                word_count = len(segment.split())
-
-                # First action with 1-4 words: keep it
-                if not kept_first and 1 <= word_count <= 4:
-                    kept_first = True
-                    # Leave this one (will convert to parentheses later)
-                else:
-                    # Remove all other actions (too long, or not the first)
-                    text = text.replace(f'*{segment}*', '', 1)
-
-        # Convert remaining asterisks to parentheses for frontend styling
-        # At this point we only have 0-1 brief action left
+        # Convert asterisks to parentheses for frontend styling
+        # Keep ALL actions - do not filter or limit them
         text = re.sub(r'\*([^*]+)\*', r'(\1)', text)
 
         # Clean up whitespace issues from removed actions
@@ -402,8 +510,9 @@ class ResponseCleaner:
         # Truncate to 2-3 sentences for more natural, concise responses
         text = self._truncate_to_sentences(text.strip(), max_sentences=3)
 
-        # Add heart emoji to goodnight messages if not already present
-        if is_goodnight and not self.HEART_PATTERN.search(text):
+        # Add heart emoji to SIMPLE goodnight messages if not already present
+        # ONLY add to brief goodnights (5 words or less), NOT long responses
+        if is_simple_goodnight and not self.HEART_PATTERN.search(text):
             # Add heart emoji to the end if it doesn't already have one
             text = text.rstrip() + ' ❤️'
 
