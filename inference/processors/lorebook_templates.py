@@ -2979,7 +2979,7 @@ class LorebookTemplates:
         "intimacy_minimal": {
             "id": "intimacy_minimal",
             "category": "narrative_control",
-            "priority": 90,
+            "priority": 105,
             "tokens": 90,
             "ui_tag": "Minimal",
             "triggers": {
@@ -2994,7 +2994,7 @@ class LorebookTemplates:
         "intimacy_sweet": {
             "id": "intimacy_sweet",
             "category": "narrative_control",
-            "priority": 90,
+            "priority": 105,
             "tokens": 90,
             "ui_tag": "Sweet",
             "triggers": {
@@ -3009,7 +3009,7 @@ class LorebookTemplates:
         "intimacy_passionate": {
             "id": "intimacy_passionate",
             "category": "narrative_control",
-            "priority": 90,
+            "priority": 105,
             "tokens": 90,
             "ui_tag": "Passionate",
             "triggers": {
@@ -3473,6 +3473,9 @@ You and {user_name} are in a romantic relationship. Act accordingly:
         "Stoic": "ee_stoic",
         "Sensitive": "ee_sensitive",
         "Expressive": "ee_expressive",
+        "Abrasive": "ee_abrasive",
+        "Grumpy": "ee_grumpy",
+        "Volatile": "ee_volatile",
 
         # Social Energy
         "Extroverted": "se_extroverted",
@@ -3482,6 +3485,7 @@ You and {user_name} are in a romantic relationship. Act accordingly:
         "Takes Initiative": "se_takes_initiative",
         "Supportive": "se_supportive",
         "Independent": "se_independent",
+        "Surly": "se_surly",
 
         # Thinking Style
         "Analytical": "ts_analytical",
@@ -3503,6 +3507,7 @@ You and {user_name} are in a romantic relationship. Act accordingly:
         "Mysterious": "he_mysterious",
         "Brooding": "he_brooding",
         "Lighthearted": "he_lighthearted",
+        "Sharp-Tongued": "he_sharp_tongued",
 
         # Core Values
         "Honest": "cv_honest",
@@ -3514,6 +3519,7 @@ You and {user_name} are in a romantic relationship. Act accordingly:
         "Adventurous": "cv_adventurous",
         "Authentic": "cv_authentic",
         "Justice-Oriented": "cv_justice_oriented",
+        "Cynical": "cv_cynical",
 
         # How They Care
         "Kind": "htc_kind",
@@ -3568,7 +3574,7 @@ You and {user_name} are in a romantic relationship. Act accordingly:
         "Mentor/Mentee": "friendship_mentor_mentee",
         "Adventure Buddies": "friendship_adventure_buddies",
         "Intellectual Companions": "friendship_intellectual_companions",
-        # Note: Reserved, Friendly, Affectionate handled below with context check
+        # Note: No Touch, Reserved, Friendly, Affectionate handled in get_template_by_ui_tag() with context check
     }
 
     @classmethod

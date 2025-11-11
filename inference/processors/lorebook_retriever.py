@@ -237,19 +237,26 @@ class LorebookRetriever:
                 action = matched_response.get("action", "")
                 emotion_priority = matched_response.get("priority", None)
 
-                # Only include non-empty sections in content
+                # Blend tone and action into natural instruction without labels
+                # This prevents "**Tone:**" and "**Action:**" from leaking into LLM output
                 content_parts = []
-                if tone:
-                    content_parts.append(f"**Tone:** {tone}")
-                if action:
-                    content_parts.append(f"**Action:** {action}")
+
+                if tone and action:
+                    # Combine both into a single flowing instruction
+                    content_parts.append(f"{action} Use {tone} tone.")
+                elif action:
+                    # Action only
+                    content_parts.append(action)
+                elif tone:
+                    # Tone only
+                    content_parts.append(f"Use {tone} tone.")
 
                 # Skip this chunk if both tone and action are empty
                 if not content_parts:
                     logger.debug(f"Skipping '{chunk['id']}' - empty tone and action for emotion '{matched_emotion}'")
                     continue
 
-                content = "\n\n".join(content_parts)
+                content = " ".join(content_parts)
                 new_chunk["content"] = content
 
                 # Update tokens from emotion-specific response

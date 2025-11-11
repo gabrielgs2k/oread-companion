@@ -395,6 +395,11 @@ class ResponseCleaner:
         text = re.sub(r'\.{2}(?!\.)', '.', text)  # Two dots become one (but leave ... alone)
         text = re.sub(r'\.{4,}', '...', text)  # Four or more dots become three
 
+        # CRITICAL: Remove code block markers (```) FIRST before cleaning stop sequences
+        # This prevents interference when stop sequences appear wrapped in code blocks like:
+        # ```*(END OF TRANSCRIPT)*```
+        text = re.sub(r'```', '', text)
+
         # Remove stop sequences and turn markers
         # IMPORTANT: Only split on turn markers that appear at the START of the text or after a newline
         # This prevents false positives when character mentions the user's name in dialogue
@@ -458,7 +463,10 @@ class ResponseCleaner:
             "User Permissions:", "(emotion:", "[silence]",
             "### End of Conversation", "###",
             "*(END CURRENT CONTEXT)*", "(END CURRENT CONTEXT)",
-            "((END RESPONSE))", "(END RESPONSE)", "**END RESPONSE**",
+            "((END RESPONSE))", "(END RESPONSE)", "**END RESPONSE**", "*(END RESPONSE)*",
+            "((END OF TRANSCRIPT))", "(END OF TRANSCRIPT)", "**END OF TRANSCRIPT**", "*(END OF TRANSCRIPT)*",
+            "((END TURN))", "(END TURN)", "**END TURN**", "*(END TURN)*",
+            "((END OF TURN))", "(END OF TURN)", "**END OF TURN**", "*(END OF TURN)*",
             "### RESPONSE ###", "### USER INPUT ###", "### CONVERSATION HISTORY ###",
             "### CURRENT CONTEXT ###"
         ]

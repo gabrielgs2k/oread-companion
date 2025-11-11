@@ -51,6 +51,9 @@ class InferenceConfig:
         self.min_response_length = int(os.getenv("MIN_RESPONSE_LENGTH", "3"))
         self.enable_fallback_cleaning = os.getenv("ENABLE_FALLBACK_CLEANING", "true").lower() == "true"
 
+        # Web search settings
+        self.enable_web_search = os.getenv("ENABLE_WEB_SEARCH", "false").lower() == "true"
+
         # CORS settings
         allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:9000,http://localhost:3000")
         self.allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
@@ -127,6 +130,7 @@ class InferenceConfig:
         logger.info(f"Context Size: {self.llm_n_ctx}")
         logger.info(f"Batch Size: {self.llm_n_batch}")
         logger.info(f"Threads: {self.llm_n_threads}")
+        logger.info(f"Web Search: {'Enabled' if self.enable_web_search else 'Disabled'}")
         logger.info(f"CORS Origins: {self.allowed_origins}")
         logger.info("=" * 60)
 

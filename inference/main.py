@@ -126,17 +126,20 @@ async def lifespan(app: FastAPI):
         emotion_detector = None
 
     # 3. Initialize MCP Client (for web search only - memory is handled by ChromaDB above)
-    try:
-        logger.info("Initializing MCP Client (Brave Search)...")
-        await initialize_mcp()
-        mcp_client = get_mcp_client()
-        if mcp_client and mcp_client.initialized:
-            logger.info("✅ MCP Search Client initialized successfully")
-        else:
-            logger.warning("⚠️ MCP Search Client initialized but not fully connected")
-    except Exception as e:
-        logger.error(f"❌ Failed to initialize MCP Search Client: {e}")
-        logger.info("Continuing without MCP (web search disabled, vector memory still active)")
+    if config.enable_web_search:
+        try:
+            logger.info("Initializing MCP Client (Brave Search)...")
+            await initialize_mcp()
+            mcp_client = get_mcp_client()
+            if mcp_client and mcp_client.initialized:
+                logger.info("✅ MCP Search Client initialized successfully")
+            else:
+                logger.warning("⚠️ MCP Search Client initialized but not fully connected")
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize MCP Search Client: {e}")
+            logger.info("Continuing without MCP (web search disabled, vector memory still active)")
+    else:
+        logger.info("⏭️  Web search disabled in config - skipping MCP Client initialization")
 
     logger.info("=" * 60)
 
@@ -161,12 +164,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error cleaning up emotion detector: {e}")
 
-    # Shutdown MCP search connection
-    try:
-        await shutdown_mcp()
-        logger.info("✅ MCP Search Client shutdown complete")
-    except Exception as e:
-        logger.error(f"Error shutting down MCP search: {e}")
+    # Shutdown MCP search connection (only if it was initialized)
+    if config.enable_web_search:
+        try:
+            await shutdown_mcp()
+            logger.info("✅ MCP Search Client shutdown complete")
+        except Exception as e:
+            logger.error(f"Error shutting down MCP search: {e}")
 
     # Shutdown vector memory service
     try:
