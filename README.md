@@ -1,4 +1,4 @@
-# Oread - Your Privacy-First AI LLM Interface
+# Oread - Your Privacy-First, AI LLM Interface
 
 <div align="center">
 
