@@ -1,8 +1,8 @@
-# Oread - Your Privacy-First, AI LLM Interface
+# Oread - Your Privacy-First, AI Interface
 
 <div align="center">
 
-**Self-hosted AI companion that actually respects your privacy**
+**Self-hosted AI interface that actually respects your privacy**
 
 [![License: Non-Commercial](https://img.shields.io/badge/License-Non--Commercial-blue.svg)](LICENSE)
 [![Privacy: Local Only](https://img.shields.io/badge/Privacy-Local%20Only-green.svg)]()
@@ -18,15 +18,15 @@
 
 Named after the Oreads (Ὀρειάδες) of Greek mythology—mountain nymphs who were loyal companions to the gods—**Oread** brings that same companionship to your computer, minus the mythology and corporate data mining.
 
-It's a **self-hosted AI LLM interface** that runs entirely on your machine. No cloud. No tracking. No sketchy terms of service. Just you, your computer, and an AI friend that stays between you two.
+It's a **self-hosted AI interface** that runs entirely on your machine. No cloud. No tracking. No sketchy terms of service. Just you, your computer, and an AI friend that stays between you two.
 
 > **⚠️ Pre-Release Software** - Works well, but expect bugs and ongoing improvements. Think "beta testing" phase.
 
 ### The Core Idea
 
-Give your AI LLM a bit of personality. The idea is to provide a model agnostic interface that allows you to give your LLM a personality, so that you can use it for anything from chat and discussion to roleplay with complete privacy. All conversations stay on your machine—Oread never phones home. Currently, it is formatted to work best with roleplay LLMs, but there will be changes in the future to ensure it is more widely supported.
+Give your AI a bit of personality. The idea is to provide a model agnostic interface that allows you to give your LLM a personality, so that you can use it for anything from chat, research, and discussion to roleplay with complete privacy. All conversations stay on your machine. Currently, it is formatted to work best with roleplay LLMs, but there will be changes in the future to ensure it is more widely supported.
 
-**You bring the model** (like downloading an app), **Oread provides the interface** (think of it as the operating system for your AI companion).
+**You bring the model** (like downloading an app), **Oread provides the interface** (think of it as the operating system for your AI assistant/companion).
 
 ---
 
@@ -90,9 +90,9 @@ Give your AI LLM a bit of personality. The idea is to provide a model agnostic i
 
 ### Getting the Best Roleplay Experience
 
-**Fill Out Your User Profile:** The more you tell your AI companion about yourself, the better it can personalize conversations. Add details about your interests, background, and preferences in Settings for richer, more engaging interactions.
+**Fill Out Your User Profile:** The more you tell your AI about yourself, the better it can personalize conversations. Add details about your interests, background, and preferences in Settings for richer, more engaging interactions.
 
-**About Fictional References:** During roleplay, your AI companion may reference or create fictional characters and scenarios. This is normal and expected—roleplay is collaborative storytelling. The AI might reference popular media, create new characters, or build imaginary worlds as part of your shared narrative. This is all part of the creative fiction-building experience.
+**About Fictional References:** During roleplay, your AI may reference or create fictional characters and scenarios. This is normal and expected—roleplay is collaborative storytelling. The AI might reference popular media, create new characters, or build imaginary worlds as part of your shared narrative. This is all part of the creative fiction-building experience.
 
 ---
 
@@ -110,7 +110,7 @@ Oread has **non-removable safety protections** built into the prompts:
 - ✅ Crisis intervention detection
 - ✅ Automatic age adjustments in roleplay
 
-**Why?** Because irresponsible AI companions hurt people, and we're not about that. These protections help you use AI responsibly—they don't control you.
+**Why?** Because irresponsible AIs hurt people, and we're not about that. These protections help you use AI responsibly—they don't control you.
 
 **Can they be removed?** Technically, yes. But doing so violates the license and defeats the purpose of responsible AI development.
 
@@ -282,7 +282,7 @@ Want to help? Awesome!
 
 ## About This Project
 
-Built by someone who wanted an AI companion without the corporate nonsense. Developed with AI assistance (Claude) because using AI to build AI tools is delightfully meta.
+Built by someone who wanted an AI assistant/companion without the corporate nonsense. Developed with AI assistance (Claude) because using AI to build AI tools is delightfully meta and qiuck.
 
 **Why no full Git history?** The repo starts from when safety features were finalized. Earlier versions (without protections) are kept private to prevent easy removal of safeguards. You can request access, but I do guard it very carefully [Original private git](https://github.com/sleddd/oread-bu)
 
@@ -303,7 +303,7 @@ Developed with the assistance of Claude (Anthropic) to decrease development time
 
 <div align="center">
 
-**AI companions should be fun, private, and safe.**
+**AI should be fun, private, and safe.**
 
 **Built for people who believe privacy and ethics actually matter.**
 
