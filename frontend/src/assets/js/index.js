@@ -1333,4 +1333,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Sidebar collapse functionality
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    const leftSidebar = document.getElementById('leftSidebar');
+
+    if (sidebarCollapseBtn && leftSidebar) {
+        // Load saved state from localStorage
+        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (sidebarCollapsed) {
+            leftSidebar.classList.add('collapsed');
+        }
+
+        // Toggle sidebar on button click
+        sidebarCollapseBtn.addEventListener('click', () => {
+            leftSidebar.classList.toggle('collapsed');
+            // Save state to localStorage
+            const isCollapsed = leftSidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        });
+    }
 });

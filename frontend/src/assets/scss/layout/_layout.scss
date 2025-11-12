@@ -12,6 +12,73 @@
   gap: 20px;
   flex-shrink: 0;
   box-shadow: 0px 2px 10px rgba(0,0,0,0.3);
+  position: relative;
+  transition: width 0.3s ease, padding 0.3s ease;
+  overflow: visible; // Allow button to show outside sidebar
+
+  // Collapsed state
+  &.collapsed {
+    width: 20px;
+    padding: 100px 10px;
+
+    .profile-avatar-container,
+    .ambient-player {
+      opacity: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .sidebar-collapse-btn svg {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+// Sidebar collapse button
+.sidebar-collapse-btn {
+  position: absolute;
+  color: #272a2a !important;
+  top: 12%;
+  right: -65px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: none !important;
+  border-radius: 4px;
+  font-size: 34px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1001;
+  padding: 0;
+  outline: none !important;
+  box-shadow: none !important;
+
+  &:hover {
+    border: none !important;
+    box-shadow: none !important;
+
+    svg,
+    svg path {
+      stroke: #1fc4ba;
+    }
+  }
+
+  &:focus {
+    outline: none !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  // Hide on mobile
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 // Toolbar
