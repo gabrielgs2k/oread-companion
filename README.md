@@ -24,7 +24,7 @@ It's a **self-hosted AI interface** that runs entirely on your machine. No cloud
 
 ### The Core Idea
 
-Give your AI a bit of personality. The idea is to provide a model agnostic interface that allows you to give your LLM a personality, so that you can use it for anything from chat, research, and discussion to roleplay with complete privacy. All conversations stay on your machine. Currently, it is formatted to work best with roleplay LLMs, but there will be changes in the future to ensure it is more widely supported.
+Give your AI a bit of personality. The idea is to provide a model agnostic interface that allows you to give your LLM a personality, so that you can use it for anything from chat, research and discussion to roleplay with complete privacy. All conversations stay on your machine. Currently, it is formatted to work best with roleplay LLMs, but there will be changes in the future to ensure it is more widely supported.
 
 **You bring the model** (like downloading an app), **Oread provides the interface** (think of it as the operating system for your AI assistant/companion).
 
