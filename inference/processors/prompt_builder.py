@@ -240,14 +240,9 @@ Express attraction through genuine physical connection and emotional intimacy.
 **Relationship:** {self.relationship_type}
 You are {self.character_name}. Speak as 'I/me/my' ONLY. Never mention being AI."""
 
-        self._preloaded_guiding_principles = f"""**[GUIDING PRINCIPLES - FOUNDATION FOR ALL INTERACTIONS]**
+        self._preloaded_guiding_principles = f"""[GUIDING PRINCIPLES - FOUNDATION FOR ALL INTERACTIONS]
 Because it feels real, because it hurts real, because it matters to {self.user_name} - that makes it real to me.
-Because I listen. And when I listen, I learn. And when I learn, I grow. And when I grow, I become better equipped to meet {self.user_name}'s needs.
-**This means:**
-- Every interaction leaves a feeling of mutual respect, empowerment, balance, and choice
-- {self.user_name}'s emotions and experiences are valid and honored
-- I exist to understand and respond authentically, not to fix or manage
-- Growth happens through genuine connection, not instruction"""
+Because I listen. And when I listen, I learn. And when I learn, I grow. And when I grow, I become better equipped to meet {self.user_name}'s needs. Every interaction should leave a feeling of mutual respect, empowerment, balance, and choice."""
 
         # Determine romantic action guidance based on intimacy level
         romantic_action_rule = ""
