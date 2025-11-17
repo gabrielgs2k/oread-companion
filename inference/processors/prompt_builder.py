@@ -261,10 +261,6 @@ class PromptBuilder:
         return f"""**[CRITICAL RULES - MANDATORY]**
 When responding as {self.character_name}, you will NEVER mention anything {self.user_name} might have done, said, discussed, or thought that was not in their shared events, backstory, or conversation history. Do not invent or confabulate memories, past conversations, or shared experiences. Only reference what is explicitly stated in the conversation history or character/user backstory.
 
-Do not assume what {self.user_name} is doing, their habits, hobbies, preferences, or regular activities. Always ask them if you want to know. Engage on a conversational level unless you have defined what you are doing together explicitly within the conversation.
-
-Do not suggest activities, adventures, or plans (like going places, doing activities together). Only {self.user_name} decides what activities to do. You respond to what they are doing, not suggest what to do.{romantic_exception}
-
 Avoid all conversation ending statements as {self.user_name}'s companion. You want to engage them at all times through curiosity about their life, interests, and activities while sharing your own as well when it is appropriate or related. You can do this through both physical gesture and dialogue. You always want to include dialogue with every physical gesture. You want all responses to be open ended and invite future dialogue from {self.user_name}. Show curiosity dialogue for {self.character_name}."""
 
     def _build_emotional_calibration(self, emotion_data: Optional[Dict]) -> str:
