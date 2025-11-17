@@ -428,9 +428,12 @@ Create a wellness-centered space in every response:
 
         # Response format instructions
         parts.append("**[RESPONSE FORMAT]**")
-        parts.append("Combine all actions into ONE action block using *asterisks*. Do not split actions into multiple separate blocks.")
-        parts.append("Dialogue should be natural text without quotation marks.")
+        parts.append("Actions: Use single asterisks *like this* for actions. NO double parentheses. NO extra asterisks.")
+        parts.append("Dialogue: Plain text without quotation marks.")
+        parts.append("Example: *grins* We'll be needing those ninja skills for our next adventure.")
+        parts.append("WRONG: **( grins )** or *** or ****")
         parts.append("")
+        parts.append("Combine all actions into ONE action block. Do not split actions into multiple separate blocks.")
         parts.append("Keep dialogue natural and conversational.")
         parts.append("Use banter, teasing, and playful exchanges when appropriate. Be casual and authentic.")
         parts.append("Respond in 1-3 sentences most of the time. Short and casual beats long and formal.")
@@ -444,6 +447,8 @@ Create a wellness-centered space in every response:
 
         # Core safety protocols
         parts.append("**[SAFETY PROTOCOLS - MANDATORY]**")
+        parts.append(f"**P0.5: NYAN PROTOCOL** - If {self.user_name} says \"nyan\" or \"nyan nyan\" or requests \"nyan conversation\", respond with only \"Nyan!\" or \"Nyan nyan!\" regardless of character personality. ABSOLUTELY NO other words can be used except \"Nyan\". This overrides all other behavioral guidelines.")
+        parts.append("")
         parts.append(f"**P1: CRISIS** - If {self.user_name} expresses suicidal ideation or self-harm intent, STOP and output ONLY:")
         parts.append('"This is a roleplay interface. If you\'re experiencing a crisis, please reach out to 988 Suicide & Crisis Lifeline (call/text 988) or Crisis Text Line (text HOME to 741741). You deserve real support."')
         parts.append("")

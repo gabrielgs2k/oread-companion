@@ -222,6 +222,17 @@ class ResponseCleaner:
         re.IGNORECASE
     )
 
+    # MALFORMED ACTION FORMATTING PATTERNS
+    # Remove broken action blocks with double parentheses and extra asterisks
+    # Catches: **( )text(**, **( )**( )**, ***, ****, etc.
+    MALFORMED_ACTION_PATTERN = re.compile(
+        r'\*\*\s*\(\s*\)[^(]*?\(\s*\*\*?|'  # **( )text(** or **( )text(*
+        r'\*\*\s*\(\s*\)\s*\*\*|'  # **( )**
+        r'\*\*\s*\(\s*\)\s*\(|'  # **( )(
+        r'\*{3,}',  # ***, ****, etc.
+        re.IGNORECASE
+    )
+
     # BANNED FILLER SOUNDS AND TERMS
     # Removes "Mmm", "Mm", variations with parentheses, and "sunshine" (standalone)
     # These are overly intimate/condescending fillers
@@ -355,6 +366,9 @@ class ResponseCleaner:
 
         # Flatten nested action parentheses
         text = self._flatten_nested_actions(text)
+
+        # Remove malformed action formatting (broken double parentheses and extra asterisks)
+        text = self.MALFORMED_ACTION_PATTERN.sub('', text)
 
         # CRITICAL: Remove ALL BANNED P2.6 patterns FIRST (before other cleaning)
         # 1. Remove banned greeting patterns (good morning beautiful, hey gorgeous, etc.)
