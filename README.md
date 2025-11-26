@@ -82,7 +82,7 @@ Give your AI a bit of personality. The idea is to provide a model agnostic inter
 - 🔐 **Encrypted profiles** - Your data is protected
 
 ### What Makes It Different
-- **Emotionally aware conversations** - Not just "bot replies"
+- **Emotionally aware conversations** 
 - **Works offline** (except optional web search)
 - **Model-agnostic** - Use any GGUF model you want
 - **No typing indicators like \*waves\*** - Natural dialogue
@@ -100,7 +100,7 @@ Give your AI a bit of personality. The idea is to provide a model agnostic inter
 
 > For the full philosophy behind these protections, see [Philosophy: Shared Responsibility](#philosophy-shared-responsibility) above and [SECURITY_ETHICS_SAFETY.md](SECURITY_ETHICS_SAFETY.md).
 
---_
+---
 
 ## Quick Start
 
@@ -196,13 +196,7 @@ Want to help? Awesome!
 - Multi-language Support - It is just English right now
 - Mobile app options
 - Model download options
-- Group conversations
-
-### Current Issues / What is still needed
-- Comprehensive personality trait testing
-- Code needs review and cleanup (it grew fast!)
-- SCSS is messy
-- Some security improvements
+- Group chat
 
 ---
 
@@ -216,7 +210,7 @@ Want to help? Awesome!
 
 ## About This Project
 
-Built by someone who wanted an AI assistant/companion without the corporate nonsense. Developed with AI assistance (Claude) because using AI to build AI tools is delightfully meta and qiuck.
+Built by someone who wanted an AI assistant/companion without the corporate nonsense. Developed with AI assistance (Claude) because building AI tools with AI is delightfully meta and qiuck.
 
 **Why no full Git history?** The repo starts from when safety features were finalized. Earlier versions (without protections) are kept private to prevent easy removal of safeguards. You can request access, but I do guard it very carefully [Original private git](https://github.com/sleddd/oread-bu)
 
